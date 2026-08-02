@@ -1,11 +1,23 @@
-import { calculateWeeklyRewards } from "./services/rewardService.js";
-import { runSync } from "./services/syncService.js";
-import { surveySubscriptions } from "./routes/survey.js";
 import { Hono } from "hono";
 import { getSupabase } from "./providers/supabase.js";
 import { listSubscriptions } from "./providers/ghl.js";
+import { surveySubscriptions } from "./routes/survey.js";
+import { runSync } from "./services/syncService.js";
+import { calculateWeeklyRewards } from "./services/rewardService.js";
 
 const app = new Hono();
+
+function requireSecret(c) {
+  const provided =
+    c.req.query("secret") ||
+    (c.req.header("authorization") || "").replace("Bearer ", "");
+
+  if (!c.env.SYNC_SECRET || provided !== c.env.SYNC_SECRET) {
+    return c.json({ success: false, error: "Unauthorized" }, 401);
+  }
+
+  return null;
+}
 
 app.get("/", (c) => {
   return c.json({
@@ -37,6 +49,8 @@ app.get("/test-db", async (c) => {
 });
 
 app.get("/test-ghl", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
   try {
     const result = await listSubscriptions(c.env, { limit: 5 });
 
@@ -64,6 +78,8 @@ app.get("/test-ghl", async (c) => {
 });
 
 app.get("/survey", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
   try {
     const result = await surveySubscriptions(c.env);
     return c.json({ success: true, ...result });
@@ -73,6 +89,8 @@ app.get("/survey", async (c) => {
 });
 
 app.get("/sync", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
   try {
     const result = await runSync(c.env);
     return c.json({ success: true, ...result });
@@ -80,7 +98,10 @@ app.get("/sync", async (c) => {
     return c.json({ success: false, error: err.message }, 500);
   }
 });
+
 app.get("/rewards/preview", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
   try {
     const result = await calculateWeeklyRewards(c.env, { dryRun: true });
     return c.json({ success: true, ...result });
@@ -90,6 +111,8 @@ app.get("/rewards/preview", async (c) => {
 });
 
 app.get("/rewards/calculate", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
   try {
     const result = await calculateWeeklyRewards(c.env);
     return c.json({ success: true, ...result });
@@ -97,4 +120,23 @@ app.get("/rewards/calculate", async (c) => {
     return c.json({ success: false, error: err.message }, 500);
   }
 });
-export default app;
+
+export default {
+  fetch: app.fetch,
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      (async () => {
+        try {
+          const sync = await runSync(env);
+          console.log("Cron sync complete:", JSON.stringify(sync));
+
+          const rewards = await calculateWeeklyRewards(env);
+          console.log("Cron rewards complete:", JSON.stringify(rewards));
+        } catch (err) {
+          console.error("Cron failed:", err.message);
+        }
+      })()
+    );
+  }
+};
