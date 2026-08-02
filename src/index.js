@@ -8,8 +8,10 @@ import {
   getOverview,
   getAffiliates,
   getAffiliateDetail,
+  getActivity,
   markDelivered
 } from "./services/dashboardService.js";
+import { dashboardHtml } from "./dashboard.js";
 
 const app = new Hono();
 
@@ -37,6 +39,10 @@ app.get("/health", (c) => {
     status: "ok",
     timestamp: new Date().toISOString()
   });
+});
+
+app.get("/dashboard", (c) => {
+  return c.html(dashboardHtml);
 });
 
 app.get("/test-db", async (c) => {
@@ -155,6 +161,16 @@ app.get("/api/affiliates/:id", async (c) => {
       success: true,
       data: await getAffiliateDetail(c.env, c.req.param("id"))
     });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.get("/api/activity", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    return c.json({ success: true, data: await getActivity(c.env) });
   } catch (err) {
     return c.json({ success: false, error: err.message }, 500);
   }

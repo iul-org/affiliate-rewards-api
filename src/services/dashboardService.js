@@ -21,18 +21,37 @@ export async function getOverview(env) {
     .from("affiliates")
     .select("*", { count: "exact", head: true });
 
-  const { data: latestWeek } = await supabase
+  const { data: allWeeks } = await supabase
     .from("weekly_rewards")
     .select("week_start, week_end, leads_owed, leads_delivered, leads_balance")
     .order("week_start", { ascending: false })
-    .limit(200);
+    .limit(500);
 
-  const weekStart = latestWeek?.[0]?.week_start || null;
-  const thisWeek = (latestWeek || []).filter((r) => r.week_start === weekStart);
+  const weekStart = allWeeks?.[0]?.week_start || null;
+  const thisWeek = (allWeeks || []).filter((r) => r.week_start === weekStart);
+
+  // roll every week up into a single trend series
+  const byWeek = {};
+  for (const r of allWeeks || []) {
+    if (!byWeek[r.week_start]) {
+      byWeek[r.week_start] = {
+        week_start: r.week_start,
+        week_end: r.week_end,
+        leads_owed: 0,
+        leads_delivered: 0
+      };
+    }
+    byWeek[r.week_start].leads_owed += r.leads_owed || 0;
+    byWeek[r.week_start].leads_delivered += r.leads_delivered || 0;
+  }
+
+  const trend = Object.values(byWeek)
+    .sort((a, b) => (a.week_start < b.week_start ? -1 : 1))
+    .slice(-12);
 
   const { data: lastSync } = await supabase
     .from("sync_logs")
-    .select("sync_started, sync_finished, status, records_processed, error_message")
+    .select("sync_started, sync_finished, status, records_processed, records_inserted, error_message")
     .order("sync_started", { ascending: false })
     .limit(1);
 
@@ -55,6 +74,7 @@ export async function getOverview(env) {
       leads_delivered: thisWeek.reduce((a, r) => a + (r.leads_delivered || 0), 0),
       leads_balance: thisWeek.reduce((a, r) => a + (r.leads_balance || 0), 0)
     },
+    trend,
     lastSync: lastSync?.[0] || null
   };
 }
@@ -86,6 +106,12 @@ export async function getAffiliates(env) {
       (r) => r.affiliate_id === a.id && r.week_start === latestWeek
     );
 
+    const spark = (rewards || [])
+      .filter((r) => r.affiliate_id === a.id)
+      .sort((x, y) => (x.week_start < y.week_start ? -1 : 1))
+      .slice(-10)
+      .map((r) => r.leads_owed || 0);
+
     return {
       id: a.id,
       code: a.affiliate_id,
@@ -97,7 +123,8 @@ export async function getAffiliates(env) {
       weekly_revenue: active.reduce((sum, s) => sum + Number(s.amount || 0), 0),
       leads_owed: current?.leads_owed || 0,
       leads_delivered: current?.leads_delivered || 0,
-      leads_balance: current?.leads_balance || 0
+      leads_balance: current?.leads_balance || 0,
+      spark
     };
   });
 }
@@ -148,6 +175,20 @@ export async function getAffiliateDetail(env, affiliateId) {
     })),
     history: history || []
   };
+}
+
+export async function getActivity(env) {
+  const supabase = getSupabase(env);
+
+  const { data, error } = await supabase
+    .from("sync_logs")
+    .select("id, sync_started, sync_finished, status, records_processed, records_inserted, error_message")
+    .order("sync_started", { ascending: false })
+    .limit(40);
+
+  if (error) throw new Error("Activity: " + error.message);
+
+  return data || [];
 }
 
 export async function markDelivered(env, { week_start, affiliate_id, leads_delivered }) {
