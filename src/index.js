@@ -1,3 +1,4 @@
+import { calculateWeeklyRewards } from "./services/rewardService.js";
 import { runSync } from "./services/syncService.js";
 import { surveySubscriptions } from "./routes/survey.js";
 import { Hono } from "hono";
@@ -74,6 +75,23 @@ app.get("/survey", async (c) => {
 app.get("/sync", async (c) => {
   try {
     const result = await runSync(c.env);
+    return c.json({ success: true, ...result });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+app.get("/rewards/preview", async (c) => {
+  try {
+    const result = await calculateWeeklyRewards(c.env, { dryRun: true });
+    return c.json({ success: true, ...result });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.get("/rewards/calculate", async (c) => {
+  try {
+    const result = await calculateWeeklyRewards(c.env);
     return c.json({ success: true, ...result });
   } catch (err) {
     return c.json({ success: false, error: err.message }, 500);
