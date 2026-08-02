@@ -6,6 +6,9 @@
   "observability": {
     "enabled": true
   },
+  "triggers": {
+    "crons": ["0 9 * * 1"]
+  },
   "vars": {
     "SUPABASE_URL": "https://xbtmvqynqgdioizshewo.supabase.co",
     "GHL_LOCATION_ID": "pqkwwYgPq7RgfCPZIO0F",
