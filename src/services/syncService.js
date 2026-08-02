@@ -31,11 +31,13 @@ export async function runSync(env) {
   const supabase = getSupabase(env);
   const startedAt = new Date().toISOString();
 
-  const { data: logRow } = await supabase
+  const { data: logRow, error: logError } = await supabase
     .from("sync_logs")
     .insert({ sync_started: startedAt, status: "running" })
     .select()
     .single();
+
+  if (logError) throw new Error("Sync log insert: " + logError.message);
 
   const logId = logRow?.id;
 
@@ -108,7 +110,7 @@ export async function runSync(env) {
       if (error) throw new Error("Subscription upsert: " + error.message);
     }
 
-    await supabase
+    const { error: logUpdateError } = await supabase
       .from("sync_logs")
       .update({
         sync_finished: new Date().toISOString(),
@@ -117,6 +119,10 @@ export async function runSync(env) {
         status: "success"
       })
       .eq("id", logId);
+
+    if (logUpdateError) {
+      throw new Error("Sync log update: " + logUpdateError.message);
+    }
 
     return {
       scanned: total,
