@@ -4,6 +4,12 @@ import { listSubscriptions } from "./providers/ghl.js";
 import { surveySubscriptions } from "./routes/survey.js";
 import { runSync } from "./services/syncService.js";
 import { calculateWeeklyRewards } from "./services/rewardService.js";
+import {
+  getOverview,
+  getAffiliates,
+  getAffiliateDetail,
+  markDelivered
+} from "./services/dashboardService.js";
 
 const app = new Hono();
 
@@ -116,6 +122,50 @@ app.get("/rewards/calculate", async (c) => {
   try {
     const result = await calculateWeeklyRewards(c.env);
     return c.json({ success: true, ...result });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.get("/api/overview", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    return c.json({ success: true, data: await getOverview(c.env) });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.get("/api/affiliates", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    return c.json({ success: true, data: await getAffiliates(c.env) });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.get("/api/affiliates/:id", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    return c.json({
+      success: true,
+      data: await getAffiliateDetail(c.env, c.req.param("id"))
+    });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.post("/api/rewards/delivered", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    const body = await c.req.json();
+    return c.json({ success: true, data: await markDelivered(c.env, body) });
   } catch (err) {
     return c.json({ success: false, error: err.message }, 500);
   }
