@@ -23,7 +23,7 @@ export async function calculateWeeklyRewards(env, { dryRun = false } = {}) {
   const supabase = getSupabase(env);
   const { week_start, week_end } = getWeekBounds();
 
-  // 1. active subscriptions with their affiliate + product
+  // 1. active subscriptions with their affiliate
   const { data: subs, error: subError } = await supabase
     .from("subscriptions")
     .select("id, ghl_product_id, status, affiliate_id, affiliates(affiliate_id)")
@@ -78,34 +78,26 @@ export async function calculateWeeklyRewards(env, { dryRun = false } = {}) {
   }));
 
   if (dryRun) {
-    return { week_start, week_end, dryRun: true, breakdown, skippedProducts: [...new Set(skipped)] };
+    return {
+      week_start,
+      week_end,
+      dryRun: true,
+      breakdown,
+      skippedProducts: [...new Set(skipped)]
+    };
   }
 
-  // 4. write the ledger, preserving leads already delivered
+  // 4. record what this week added to the debt.
+  //    Deliveries live in lead_deliveries and are never touched here.
   if (breakdown.length) {
-    const { data: existing } = await supabase
-      .from("weekly_rewards")
-      .select("affiliate_id, leads_delivered")
-      .eq("week_start", week_start);
-
-    const deliveredMap = {};
-    for (const row of existing || []) {
-      deliveredMap[row.affiliate_id] = row.leads_delivered || 0;
-    }
-
-    const rows = breakdown.map((b) => {
-      const delivered = deliveredMap[b.affiliate_id] || 0;
-      return {
-        week_start,
-        week_end,
-        affiliate_id: b.affiliate_id,
-        active_subscriptions: b.active_subscriptions,
-        leads_owed: b.leads_owed,
-        leads_delivered: delivered,
-        leads_balance: b.leads_owed - delivered,
-        calculated_at: new Date().toISOString()
-      };
-    });
+    const rows = breakdown.map((b) => ({
+      week_start,
+      week_end,
+      affiliate_id: b.affiliate_id,
+      active_subscriptions: b.active_subscriptions,
+      leads_owed: b.leads_owed,
+      calculated_at: new Date().toISOString()
+    }));
 
     const { error } = await supabase
       .from("weekly_rewards")
