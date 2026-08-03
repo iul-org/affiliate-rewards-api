@@ -3,7 +3,11 @@ import { getSupabase } from "./providers/supabase.js";
 import { listSubscriptions, listAffiliates, listCampaigns } from "./providers/ghl.js";
 import { surveySubscriptions } from "./routes/survey.js";
 import { runSync, getUnlinkedCodes } from "./services/syncService.js";
-import { calculateWeeklyRewards } from "./services/rewardService.js";
+import {
+  calculateWeeklyRewards,
+  findMissingWeeks,
+  backfillMissingWeeks
+} from "./services/rewardService.js";
 import {
   getOverview,
   getAffiliates,
@@ -15,6 +19,11 @@ import {
   linkReferralCode,
   unlinkReferralCode
 } from "./services/dashboardService.js";
+import {
+  alertSyncFailed,
+  alertWeeklySummary,
+  alertTest
+} from "./providers/alerts.js";
 import { dashboardHtml } from "./dashboard.js";
 
 const app = new Hono();
@@ -125,6 +134,17 @@ app.get("/test-campaigns", async (c) => {
   }
 });
 
+app.get("/test-alert", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    const result = await alertTest(c.env);
+    return c.json({ success: true, ...result });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
 app.get("/survey", async (c) => {
   const auth = requireSecret(c); if (auth) return auth;
 
@@ -166,6 +186,30 @@ app.get("/rewards/calculate", async (c) => {
   try {
     const result = await calculateWeeklyRewards(c.env);
     return c.json({ success: true, ...result });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.get("/rewards/gaps", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    return c.json({ success: true, ...(await findMissingWeeks(c.env)) });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.get("/rewards/backfill", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    const dryRun = c.req.query("confirm") !== "yes";
+    return c.json({
+      success: true,
+      ...(await backfillMissingWeeks(c.env, { dryRun }))
+    });
   } catch (err) {
     return c.json({ success: false, error: err.message }, 500);
   }
@@ -292,14 +336,38 @@ export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(
       (async () => {
+        let stage = "sync";
+
         try {
           const sync = await runSync(env);
           console.log("Cron sync complete:", JSON.stringify(sync));
 
+          stage = "backfill";
+          const gaps = await backfillMissingWeeks(env);
+          if (gaps.filled) {
+            console.log("Cron backfilled missing weeks:", JSON.stringify(gaps));
+          }
+
+          stage = "reward calculation";
           const rewards = await calculateWeeklyRewards(env);
           console.log("Cron rewards complete:", JSON.stringify(rewards));
+
+          stage = "summary";
+          let balances = null;
+          try {
+            const overview = await getOverview(env);
+            balances = overview.lifetime;
+          } catch (err) {
+            console.error("Could not load balances for summary:", err.message);
+          }
+
+          const mail = await alertWeeklySummary(env, { sync, rewards, gaps, balances });
+          console.log("Cron summary email:", JSON.stringify(mail));
         } catch (err) {
-          console.error("Cron failed:", err.message);
+          console.error("Cron failed during " + stage + ":", err.message);
+
+          const mail = await alertSyncFailed(env, { error: err.message, stage });
+          console.log("Cron failure email:", JSON.stringify(mail));
         }
       })()
     );
