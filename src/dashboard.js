@@ -31,7 +31,6 @@ export const dashboardHtml = `<!DOCTYPE html>
   .d1{animation-delay:.04s}.d2{animation-delay:.08s}.d3{animation-delay:.12s}
   .d4{animation-delay:.16s}.d5{animation-delay:.2s}.d6{animation-delay:.24s}
 
-  /* masthead */
   .masthead{background:var(--navy);color:#fff}
   .mhtop{display:flex;align-items:center;justify-content:space-between;gap:20px;
     flex-wrap:wrap;padding:20px 0 16px}
@@ -45,14 +44,16 @@ export const dashboardHtml = `<!DOCTYPE html>
   .tabs{display:flex;gap:2px;border-bottom:1px solid rgba(255,255,255,.12)}
   .tab{background:none;border:0;color:#9DB6C2;font:inherit;font-size:14px;font-weight:500;
     padding:11px 16px;cursor:pointer;position:relative;border-radius:3px 3px 0 0;
-    transition:color .2s,background .2s}
+    transition:color .2s,background .2s;white-space:nowrap}
   .tab:hover{color:#fff;background:rgba(255,255,255,.05)}
   .tab[aria-selected=true]{color:#fff}
   .tab[aria-selected=true]::after{content:'';position:absolute;left:14px;right:14px;bottom:-1px;
     height:2px;background:var(--mint);border-radius:2px;animation:fade .25s both}
   .masthead .tab:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+  .tabdot{display:inline-block;min-width:17px;height:17px;line-height:17px;padding:0 5px;
+    border-radius:99px;background:var(--gold);color:var(--navy);font-size:10.5px;
+    font-weight:600;text-align:center;margin-left:7px;font-family:'IBM Plex Mono',monospace}
 
-  /* ledger */
   .ledger{background:var(--navy2);color:#fff}
   .figs{display:grid;grid-template-columns:repeat(4,1fr)}
   .fig{padding:26px 26px 30px;position:relative}
@@ -66,7 +67,6 @@ export const dashboardHtml = `<!DOCTYPE html>
     color:#9DB6C2}
   .fig .sub{margin-top:5px;font-size:12px;color:#7593A3;font-family:'IBM Plex Mono',monospace}
 
-  /* panels */
   .panel{padding:36px 0 0}
   .panel[hidden]{display:none}
   .sechead{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
@@ -78,7 +78,6 @@ export const dashboardHtml = `<!DOCTYPE html>
     box-shadow:var(--shadow)}
   .grid2{display:grid;grid-template-columns:1.55fr 1fr;gap:14px}
 
-  /* chart */
   .chart{padding:22px 24px 18px}
   .chart h3,.side h3{font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
     color:var(--muted);margin:0 0 14px;font-weight:600}
@@ -89,7 +88,6 @@ export const dashboardHtml = `<!DOCTYPE html>
   .bseg.got{background:var(--green);border-radius:0 0 2px 2px}
   .blab{margin-top:8px;font-size:10px;color:var(--muted);text-align:center;
     font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .bar:hover .bseg.owe{background:#CBD9DF}
   .legend{display:flex;gap:16px;margin-top:14px;padding-top:13px;border-top:1px solid var(--line2);
     font-size:12px;color:var(--muted)}
   .legend i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:6px}
@@ -101,17 +99,26 @@ export const dashboardHtml = `<!DOCTYPE html>
   .kv .k{color:var(--muted)}
   .kv .v{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
 
+  /* alert banner */
+  .alert{background:#FDF6EC;border:1px solid #F0DCC0;border-radius:4px;padding:16px 18px;
+    margin-bottom:16px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;
+    animation:rise .4s both}
+  .alert .txt{flex:1;min-width:240px;font-size:13.5px}
+  .alert .txt strong{display:block;margin-bottom:3px;font-weight:500;font-size:14.5px}
+
   /* rows */
   .row{background:var(--card);border:1px solid var(--line);border-radius:4px;
-    padding:20px 22px;margin-bottom:10px;box-shadow:var(--shadow);
-    transition:border-color .2s}
+    padding:20px 22px;margin-bottom:10px;box-shadow:var(--shadow);transition:border-color .2s}
   .row:hover{border-color:#CFD8D3}
   .row.settled{border-left:3px solid var(--green)}
   .row.owing{border-left:3px solid var(--gold)}
+  .row.unlinked{border-left:3px solid #C9C4B6}
   .rowtop{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;
     flex-wrap:wrap}
-  .code{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:500}
-  .facts{margin-top:4px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .who{font-size:17px;font-weight:500;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .refcode{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);
+    background:var(--line2);padding:2px 8px;border-radius:99px}
+  .facts{margin-top:5px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
   .facts span+span::before{content:' \\00b7 '}
   .balbox{text-align:right}
   .balnum{font-family:'Instrument Serif',Georgia,serif;font-size:34px;line-height:1;
@@ -128,7 +135,6 @@ export const dashboardHtml = `<!DOCTYPE html>
   .glab{margin-top:8px;font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--muted);
     display:flex;justify-content:space-between;gap:12px}
 
-  /* delivery bar */
   .deliver{margin-top:16px;padding-top:15px;border-top:1px solid var(--line2)}
   .dlabel{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);
     margin-bottom:9px}
@@ -143,8 +149,8 @@ export const dashboardHtml = `<!DOCTYPE html>
   .amtwrap span{font-size:12.5px;color:var(--muted)}
 
   .confirm{margin-top:14px;padding:14px 16px;background:#FDF6EC;border:1px solid #F0DCC0;
-    border-radius:3px;animation:rise .28s both;
-    display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    border-radius:3px;animation:rise .28s both;display:flex;align-items:center;gap:12px;
+    flex-wrap:wrap}
   .confirm .q{font-size:14px;flex:1;min-width:200px}
   .confirm .q b{font-family:'IBM Plex Mono',monospace}
   .settledmsg{margin-top:16px;padding-top:15px;border-top:1px solid var(--line2);
@@ -155,7 +161,19 @@ export const dashboardHtml = `<!DOCTYPE html>
   .spark i{width:4px;background:#CBD9DF;border-radius:1px;display:block}
   .spark i:last-child{background:var(--navy3)}
 
-  /* controls */
+  /* link cards */
+  .linkrow{background:var(--card);border:1px solid var(--line);border-radius:4px;
+    padding:18px 20px;margin-bottom:10px;box-shadow:var(--shadow);
+    border-left:3px solid var(--gold)}
+  .linkrow .head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    align-items:flex-start}
+  .bigcode{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:500}
+  .linkctl{margin-top:14px;padding-top:14px;border-top:1px solid var(--line2);
+    display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  select{font:inherit;font-size:14px;padding:8px 11px;border:1px solid var(--line);
+    border-radius:3px;background:#fff;color:var(--ink);max-width:100%}
+  select:focus{outline:0;border-color:var(--green);box-shadow:0 0 0 3px rgba(31,157,85,.13)}
+
   input[type=number],input[type=password],input[type=search],input[type=text]{
     font:inherit;font-family:'IBM Plex Mono',monospace;padding:8px 11px;
     border:1px solid var(--line);border-radius:3px;background:#fff;color:var(--ink);width:104px;
@@ -183,7 +201,6 @@ export const dashboardHtml = `<!DOCTYPE html>
   .spinner{width:13px;height:13px;border:2px solid rgba(255,255,255,.32);
     border-top-color:#fff;border-radius:99px;animation:spin .7s linear infinite;flex:none}
 
-  /* detail */
   .detail{margin-top:15px;padding-top:16px;border-top:1px solid var(--line2);
     animation:rise .35s cubic-bezier(.22,1,.36,1) both}
   .detail h3{font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);
@@ -194,7 +211,6 @@ export const dashboardHtml = `<!DOCTYPE html>
     color:var(--muted);padding:0 10px 8px 0;border-bottom:1px solid var(--line)}
   td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line2);
     font-variant-numeric:tabular-nums}
-  tbody tr{transition:background .15s}
   tbody tr:hover{background:#FAFAF7}
   td.num,th.num{text-align:right;padding-right:0}
 
@@ -205,7 +221,6 @@ export const dashboardHtml = `<!DOCTYPE html>
   .pill.warn{background:#FBEEDC;color:#8A5311}
   .pill.bad{background:#FBE6E2;color:#96291A}
 
-  /* toast */
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:60;
     background:var(--navy);color:#fff;padding:12px 20px;border-radius:4px;font-size:14px;
     box-shadow:0 12px 32px -8px rgba(11,44,61,.42);
@@ -227,7 +242,6 @@ export const dashboardHtml = `<!DOCTYPE html>
     font-size:12.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;
     display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
-  /* gate */
   .gate{min-height:100vh;display:grid;place-items:center;padding:24px;
     background:radial-gradient(1000px 520px at 50% -8%,#12384C 0%,var(--navy) 62%)}
   .gatebox{width:100%;max-width:376px;background:var(--card);border-radius:5px;padding:36px;
@@ -253,9 +267,7 @@ export const dashboardHtml = `<!DOCTYPE html>
     .spark{display:none}
     .balbox{text-align:left}
   }
-  @media(prefers-reduced-motion:reduce){
-    *,*::after{animation:none!important;transition:none!important}
-  }
+  @media(prefers-reduced-motion:reduce){ *,*::after{animation:none!important;transition:none!important} }
 </style>
 </head>
 <body>
@@ -281,6 +293,7 @@ export const dashboardHtml = `<!DOCTYPE html>
       <div class="tabs" role="tablist">
         <button class="tab" role="tab" data-tab="overview" aria-selected="true">Overview</button>
         <button class="tab" role="tab" data-tab="affiliates" aria-selected="false">Affiliates</button>
+        <button class="tab" role="tab" data-tab="linking" aria-selected="false">Linking<span class="tabdot hide" id="linkDot">0</span></button>
         <button class="tab" role="tab" data-tab="deliveries" aria-selected="false">Deliveries</button>
         <button class="tab" role="tab" data-tab="activity" aria-selected="false">Activity</button>
       </div>
@@ -318,6 +331,8 @@ export const dashboardHtml = `<!DOCTYPE html>
     <p class="err hide" id="topErr"></p>
 
     <div class="panel" id="p-overview">
+      <div id="alertHost"></div>
+
       <div class="sechead">
         <h2>The <em>week</em> in review</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -358,9 +373,22 @@ export const dashboardHtml = `<!DOCTYPE html>
     <div class="panel" id="p-affiliates" hidden>
       <div class="sechead">
         <h2>Every <em>affiliate</em></h2>
-        <input type="search" id="search" placeholder="Search by code" autocomplete="off">
+        <input type="search" id="search" placeholder="Search by name or code" autocomplete="off">
       </div>
       <div id="list"></div>
+    </div>
+
+    <div class="panel" id="p-linking" hidden>
+      <div class="sechead">
+        <h2>Referral <em>codes</em></h2>
+        <button class="ghost" id="scanBtn">Scan for new codes</button>
+      </div>
+      <p style="font-size:13.5px;color:var(--muted);margin:0 0 18px;max-width:640px">
+        GHL records each sale against a referral code such as <b>marcus8575</b>, but does not
+        publish which affiliate owns it. Link each code once and every future sale attributes
+        automatically.
+      </p>
+      <div id="linking"><div class="skel" style="width:55%"></div></div>
     </div>
 
     <div class="panel" id="p-deliveries" hidden>
@@ -392,7 +420,7 @@ export const dashboardHtml = `<!DOCTYPE html>
 
 <script>
 var KEY = sessionStorage.getItem('arp_key') || '';
-var S = { overview:null, affiliates:[], activity:null, deliveries:null,
+var S = { overview:null, affiliates:[], activity:null, deliveries:null, unlinked:null,
           open:null, detail:{}, pending:null, tab:'overview', q:'' };
 
 function el(id){ return document.getElementById(id); }
@@ -487,21 +515,23 @@ function enter(){
 }
 
 /* ---------- tabs ---------- */
-Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(t){
-  t.addEventListener('click',function(){
-    S.tab=t.getAttribute('data-tab');
-    Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(x){
-      x.setAttribute('aria-selected', x===t?'true':'false');
-    });
-    ['overview','affiliates','deliveries','activity'].forEach(function(n){
-      var p=el('p-'+n);
-      p.hidden=n!==S.tab;
-      if(n===S.tab){ p.classList.remove('rise'); void p.offsetWidth; p.classList.add('rise'); }
-    });
-    if(S.tab==='affiliates') renderList();
-    if(S.tab==='deliveries' && !S.deliveries) loadDeliveries();
-    if(S.tab==='activity' && !S.activity) loadActivity();
+function switchTab(name){
+  S.tab=name;
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(x){
+    x.setAttribute('aria-selected', x.getAttribute('data-tab')===name?'true':'false');
   });
+  ['overview','affiliates','linking','deliveries','activity'].forEach(function(n){
+    var p=el('p-'+n);
+    p.hidden=n!==name;
+    if(n===name){ p.classList.remove('rise'); void p.offsetWidth; p.classList.add('rise'); }
+  });
+  if(name==='affiliates') renderList();
+  if(name==='linking' && !S.unlinked) loadUnlinked();
+  if(name==='deliveries' && !S.deliveries) loadDeliveries();
+  if(name==='activity' && !S.activity) loadActivity();
+}
+Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(t){
+  t.addEventListener('click',function(){ switchTab(t.getAttribute('data-tab')); });
 });
 
 /* ---------- load ---------- */
@@ -510,7 +540,7 @@ function loadAll(){
   return Promise.all([api('/api/overview'),api('/api/affiliates')]).then(function(r){
     S.overview=r[0].data;
     S.affiliates=r[1].data||[];
-    renderLedger(); renderChart(); renderSide(); renderTop(); renderList();
+    renderLedger(); renderChart(); renderSide(); renderAlert(); renderTop(); renderList();
   }).catch(showErr);
 }
 function loadActivity(){
@@ -521,9 +551,23 @@ function loadDeliveries(){
   return api('/api/deliveries').then(function(r){ S.deliveries=r.data||[]; renderDeliveries(); })
     .catch(showErr);
 }
+function loadUnlinked(){
+  el('linking').innerHTML='<div class="skel" style="width:55%"></div>';
+  return api('/api/unlinked').then(function(r){
+    S.unlinked=r.data||[]; renderLinking(); renderDot();
+  }).catch(function(e){
+    el('linking').innerHTML='<div class="note">Could not scan: '+esc(e.message)+'</div>';
+  });
+}
 function showErr(e){
   var n=el('topErr'); n.textContent=e.message; n.classList.remove('hide');
   toast(e.message,true);
+}
+
+function renderDot(){
+  var n=(S.unlinked||[]).length, d=el('linkDot');
+  if(n>0){ d.textContent=n; d.classList.remove('hide'); }
+  else d.classList.add('hide');
 }
 
 /* ---------- ledger ---------- */
@@ -552,6 +596,20 @@ function renderLedger(){
     ? 'Last pull '+ago(s.sync_started)+' \\u00b7 '+s.status+' \\u00b7 '+num(s.records_processed)+' scanned'
     : 'No pull recorded yet';
   el('revInfo').textContent=money(o.activeWeeklyRevenue)+'/wk referred revenue';
+}
+
+function renderAlert(){
+  var o=S.overview, host=el('alertHost');
+  var n=o&&o.unlinkedAffiliates||0;
+
+  if(!n){ host.innerHTML=''; return; }
+
+  host.innerHTML='<div class="alert"><div class="txt">'+
+    '<strong>'+num(n)+' affiliate'+(n===1?' has':'s have')+' no referral code linked</strong>'+
+    'Their sales cannot be attributed until a code is linked. Everything else still works.'+
+    '</div><button class="ghost" id="goLink">Open linking</button></div>';
+
+  el('goLink').addEventListener('click',function(){ switchTab('linking'); });
 }
 
 function renderChart(){
@@ -599,9 +657,14 @@ var QUICK=[40,100,200,500,1000];
 function deliverHtml(a){
   var bal=a.balance||0;
 
+  if(!a.linked){
+    return '<div class="settledmsg">No referral code linked yet, so no sales are attributed here. '+
+      'Link one on the Linking tab.</div>';
+  }
+
   if(S.pending && S.pending.id===a.id){
     return '<div class="confirm">'+
-      '<div class="q">Record <b>'+num(S.pending.leads)+'</b> leads delivered to <b>'+esc(a.code)+'</b>? '+
+      '<div class="q">Record <b>'+num(S.pending.leads)+'</b> leads delivered to <b>'+esc(a.name)+'</b>? '+
       'Their balance becomes <b>'+num(bal-S.pending.leads)+'</b>.</div>'+
       '<button class="go" data-confirm="'+esc(a.id)+'">Confirm</button>'+
       '<button class="ghost" data-cancel="1">Cancel</button>'+
@@ -634,6 +697,7 @@ function rowHtml(a,i){
   var owed=a.lifetime_owed||0, got=a.lifetime_delivered||0, bal=a.balance||0;
   var pct=owed>0?Math.min(100,Math.round((got/owed)*100)):0;
   var settled=bal<=0;
+  var cls = !a.linked ? 'unlinked' : (settled?'settled':'owing');
 
   var spark=(a.spark||[]);
   var smax=Math.max.apply(null,spark.concat([1]));
@@ -642,15 +706,19 @@ function rowHtml(a,i){
         return '<i style="height:'+Math.max(3,Math.round((v/smax)*22))+'px"></i>'; }).join('')+'</div>'
     : '';
 
-  return '<div class="row '+(settled?'settled':'owing')+' rise d'+Math.min(6,i+1)+'">'+
+  return '<div class="row '+cls+' rise d'+Math.min(6,i+1)+'">'+
     '<div class="rowtop">'+
       '<div>'+
-        '<div class="code">'+esc(a.code)+'</div>'+
+        '<div class="who">'+esc(a.name)+
+          (a.linked?'<span class="refcode">'+esc(a.code)+'</span>'
+                   :'<span class="pill warn">Not linked</span>')+
+          (a.status!=='active'?'<span class="pill dead">'+esc(a.status)+'</span>':'')+
+        '</div>'+
         '<div class="facts">'+
+          (a.email?'<span>'+esc(a.email)+'</span>':'')+
           '<span>'+num(a.active_referrals)+' active</span>'+
           '<span>'+num(a.weekly_rate)+'/week</span>'+
           '<span>'+money(a.weekly_revenue)+'/wk</span>'+
-          (a.last_delivery?'<span>last sent '+ago(a.last_delivery)+'</span>':'') +
         '</div>'+
       '</div>'+
       '<div class="balbox">'+
@@ -666,6 +734,7 @@ function rowHtml(a,i){
     '<div class="rowlinks">'+
       '<button class="link" data-open="'+esc(a.id)+'">'+
         (S.open===a.id?'Hide details':'View details')+'</button>'+
+      (a.linked?'<button class="link danger" data-unlink="'+esc(a.id)+'">Unlink code</button>':'')+
       sparkHtml+
     '</div>'+
     (S.open===a.id?detailHtml(a.id):'')+
@@ -706,6 +775,9 @@ function bindRows(host){
   Array.prototype.forEach.call(host.querySelectorAll('[data-undo]'),function(b){
     b.addEventListener('click',function(){ undoDelivery(b.getAttribute('data-undo')); });
   });
+  Array.prototype.forEach.call(host.querySelectorAll('[data-unlink]'),function(b){
+    b.addEventListener('click',function(){ doUnlink(b.getAttribute('data-unlink')); });
+  });
 }
 
 function renderTop(){
@@ -725,14 +797,17 @@ function renderList(){
   var host=el('list');
   var q=S.q.trim().toLowerCase();
   var items=q?S.affiliates.filter(function(a){
-    return String(a.code||'').toLowerCase().indexOf(q)!==-1; }):S.affiliates;
+    return String(a.name||'').toLowerCase().indexOf(q)!==-1
+        || String(a.code||'').toLowerCase().indexOf(q)!==-1
+        || String(a.email||'').toLowerCase().indexOf(q)!==-1;
+  }):S.affiliates;
 
   if(!S.affiliates.length){
-    host.innerHTML='<div class="note"><strong>No affiliates yet</strong>Once someone buys through a referral link, they will appear here after the next pull.</div>';
+    host.innerHTML='<div class="note"><strong>No affiliates yet</strong>Add an affiliate to the Lead Payout Campaign in GHL, then pull the latest data.</div>';
     return;
   }
   if(!items.length){
-    host.innerHTML='<div class="note"><strong>No match</strong>No affiliate code contains that text.</div>';
+    host.innerHTML='<div class="note"><strong>No match</strong>Nothing matches that search.</div>';
     return;
   }
   host.innerHTML=items.map(rowHtml).join('');
@@ -740,6 +815,94 @@ function renderList(){
 }
 
 el('search').addEventListener('input',function(e){ S.q=e.target.value; renderList(); });
+
+/* ---------- linking ---------- */
+function renderLinking(){
+  var host=el('linking'), rows=S.unlinked||[];
+  var open=S.affiliates.filter(function(a){ return !a.linked; });
+
+  if(!rows.length){
+    host.innerHTML='<div class="note"><strong>Every code is linked</strong>'+
+      (open.length
+        ? num(open.length)+' affiliate'+(open.length===1?' has':'s have')+' no code yet, but no unclaimed sales exist either. A code will appear here after their first referral.'
+        : 'All sales are attributed correctly.')+'</div>';
+    return;
+  }
+
+  host.innerHTML=rows.map(function(r){
+    var opts=(r.candidates||[]).map(function(cand){
+      var sel = r.suggestion && r.suggestion.id===cand.id ? ' selected' : '';
+      return '<option value="'+esc(cand.id)+'"'+sel+'>'+esc(cand.name||cand.email||cand.id)+'</option>';
+    }).join('');
+
+    return '<div class="linkrow">'+
+      '<div class="head">'+
+        '<div>'+
+          '<div class="bigcode">'+esc(r.code)+'</div>'+
+          '<div class="facts">'+
+            '<span>'+num(r.subscriptions)+' sale'+(r.subscriptions===1?'':'s')+'</span>'+
+            '<span>'+num(r.active)+' still active</span>'+
+          '</div>'+
+        '</div>'+
+        (r.suggestion
+          ? '<span class="pill ok">Looks like '+esc(r.suggestion.name)+'</span>'
+          : r.ambiguous
+            ? '<span class="pill warn">Several possible matches</span>'
+            : '<span class="pill dead">No obvious match</span>')+
+      '</div>'+
+      '<div class="linkctl">'+
+        (opts
+          ? '<select id="sel-'+esc(r.code)+'">'+opts+'</select>'+
+            '<button class="go" data-link="'+esc(r.code)+'">Link this code</button>'
+          : '<span style="font-size:13.5px;color:var(--muted)">Every affiliate already has a code. Add the affiliate in GHL and pull again.</span>')+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  Array.prototype.forEach.call(host.querySelectorAll('[data-link]'),function(b){
+    b.addEventListener('click',function(){
+      var code=b.getAttribute('data-link');
+      var sel=el('sel-'+code);
+      if(!sel) return;
+      doLink(sel.value, code, b);
+    });
+  });
+}
+
+function doLink(affiliateId, code, btn){
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Linking';
+
+  api('/api/link',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ affiliate_id:affiliateId, referral_code:code })
+  }).then(function(r){
+    toast('Linked '+code+' to '+(r.data.name||'affiliate')+'. Pull from GHL to attribute their sales.');
+    S.unlinked=null; S.detail={};
+    return loadAll();
+  }).then(function(){ return loadUnlinked(); })
+    .catch(function(e){
+      btn.disabled=false; btn.textContent='Link this code';
+      showErr(e);
+    });
+}
+
+function doUnlink(id){
+  api('/api/link/'+encodeURIComponent(id),{ method:'DELETE' }).then(function(){
+    toast('Code unlinked.');
+    S.unlinked=null; S.detail={};
+    return loadAll();
+  }).catch(showErr);
+}
+
+el('scanBtn').addEventListener('click',function(){
+  var b=el('scanBtn');
+  b.disabled=true; b.innerHTML='<span class="spinner"></span>Scanning';
+  S.unlinked=null;
+  loadUnlinked().then(function(){
+    b.disabled=false; b.textContent='Scan for new codes';
+  });
+});
 
 /* ---------- detail ---------- */
 function detailHtml(id){
@@ -794,10 +957,7 @@ function toggleDetail(id){
 }
 
 /* ---------- deliveries ---------- */
-function askConfirm(id,leads){
-  S.pending={ id:id, leads:leads };
-  rerenderRows();
-}
+function askConfirm(id,leads){ S.pending={ id:id, leads:leads }; rerenderRows(); }
 
 function doDeliver(id){
   if(!S.pending||S.pending.id!==id) return;
@@ -808,10 +968,8 @@ function doDeliver(id){
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({ affiliate_id:id, leads:leads })
   }).then(function(r){
-    S.pending=null;
-    delete S.detail[id];
-    S.deliveries=null;
-    toast('Recorded '+num(leads)+' leads to '+r.data.affiliate_code+'. Balance now '+num(r.data.balance)+'.');
+    S.pending=null; delete S.detail[id]; S.deliveries=null;
+    toast('Recorded '+num(leads)+' leads to '+r.data.affiliate_name+'. Balance now '+num(r.data.balance)+'.');
     return loadAll();
   }).catch(function(e){ S.pending=null; rerenderRows(); showErr(e); });
 }
@@ -837,7 +995,7 @@ function renderDeliveries(){
     '<th class="num">Leads</th><th>Note</th><th class="num"></th></tr></thead><tbody>'+
     rows.map(function(r){
       return '<tr><td>'+fmtTime(r.delivered_at)+'</td>'+
-        '<td style="font-family:\\'IBM Plex Mono\\',monospace">'+esc(r.affiliate_code||'\\u2014')+'</td>'+
+        '<td>'+esc(r.affiliate_name||'\\u2014')+'</td>'+
         '<td class="num">'+num(r.leads)+'</td>'+
         '<td>'+esc(r.note||'')+'</td>'+
         '<td class="num"><button class="link danger" data-undo="'+esc(r.id)+'">Remove</button></td></tr>';
@@ -868,7 +1026,7 @@ function renderActivity(){
 
 /* ---------- actions ---------- */
 el('refreshBtn').addEventListener('click',function(){
-  S.detail={}; S.activity=null; S.deliveries=null; S.pending=null;
+  S.detail={}; S.activity=null; S.deliveries=null; S.pending=null; S.unlinked=null;
   loadAll().then(function(){ toast('Refreshed'); });
 });
 
@@ -877,14 +1035,17 @@ el('syncBtn').addEventListener('click',function(){
   b.disabled=true; b.innerHTML='<span class="spinner"></span>Pulling from GHL';
   el('topErr').classList.add('hide');
 
-  api('/sync').then(function(){
+  api('/sync').then(function(r){
+    var un=(r.unlinked||[]).length;
     b.innerHTML='<span class="spinner"></span>Calculating rewards';
-    return api('/rewards/calculate');
-  }).then(function(){
-    S.detail={}; S.activity=null; S.pending=null;
-    return loadAll();
-  }).then(function(){
-    toast('Up to date with GHL');
+    return api('/rewards/calculate').then(function(){ return un; });
+  }).then(function(un){
+    S.detail={}; S.activity=null; S.pending=null; S.unlinked=null;
+    return loadAll().then(function(){
+      toast(un
+        ? 'Up to date. '+un+' referral code'+(un===1?'':'s')+' still need linking.'
+        : 'Up to date with GHL');
+    });
   }).catch(showErr).then(function(){
     b.disabled=false; b.textContent='Pull latest from GHL';
   });

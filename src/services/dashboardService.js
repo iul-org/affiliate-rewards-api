@@ -39,9 +39,14 @@ export async function getOverview(env) {
     if (s.status === "active") activeRevenue += Number(s.amount || 0);
   }
 
-  const { count: affiliateCount } = await supabase
+  const { data: affiliateRows } = await supabase
     .from("affiliates")
-    .select("*", { count: "exact", head: true });
+    .select("id, referral_code, status");
+
+  const affiliateCount = (affiliateRows || []).length;
+  const unlinkedAffiliates = (affiliateRows || []).filter(
+    (a) => !a.referral_code
+  ).length;
 
   const { data: weeks, error: weekError } = await supabase
     .from("weekly_rewards")
@@ -60,11 +65,11 @@ export async function getOverview(env) {
   const lifetimeOwed = sumBy(weeks, "leads_owed");
   const lifetimeDelivered = sumBy(deliveries, "leads");
 
-  // this week only
   const currentWeekStart = weeks?.[0]?.week_start || null;
-  const currentRows = (weeks || []).filter((w) => w.week_start === currentWeekStart);
+  const currentRows = (weeks || []).filter(
+    (w) => w.week_start === currentWeekStart
+  );
 
-  // build the trend: leads added per week, plus deliveries falling in that window
   const weekMeta = {};
   for (const w of weeks || []) {
     if (!weekMeta[w.week_start]) {
@@ -86,7 +91,6 @@ export async function getOverview(env) {
     const when = String(d.delivered_at || "").slice(0, 10);
     if (!when) continue;
 
-    // the week whose range contains this delivery, else the closest earlier week
     let bucket = ordered.find((w) => when >= w.week_start && when <= w.week_end);
     if (!bucket) {
       const earlier = ordered.filter((w) => w.week_start <= when);
@@ -102,7 +106,8 @@ export async function getOverview(env) {
     .limit(1);
 
   return {
-    affiliates: affiliateCount || 0,
+    affiliates: affiliateCount,
+    unlinkedAffiliates,
     subscriptions: {
       total: (subs || []).length,
       active: statusCounts.active || 0,
@@ -139,7 +144,7 @@ export async function getAffiliates(env) {
 
   const { data: affiliates, error } = await supabase
     .from("affiliates")
-    .select("id, affiliate_id, name, email, status, created_at");
+    .select("id, affiliate_id, referral_code, name, email, phone, status, created_at");
 
   if (error) throw new Error("Affiliates: " + error.message);
 
@@ -182,9 +187,11 @@ export async function getAffiliates(env) {
 
     return {
       id: a.id,
-      code: a.affiliate_id,
-      name: a.name,
+      code: a.referral_code || null,
+      linked: Boolean(a.referral_code),
+      name: a.name || a.affiliate_id,
       email: a.email,
+      phone: a.phone,
       status: a.status,
       total_referrals: mySubs.length,
       active_referrals: active.length,
@@ -247,9 +254,11 @@ export async function getAffiliateDetail(env, affiliateId) {
   return {
     affiliate: {
       id: affiliate.id,
-      code: affiliate.affiliate_id,
+      code: affiliate.referral_code || null,
+      ghl_id: affiliate.affiliate_id,
       name: affiliate.name,
       email: affiliate.email,
+      phone: affiliate.phone,
       status: affiliate.status
     },
     totals: {
@@ -264,6 +273,56 @@ export async function getAffiliateDetail(env, affiliateId) {
     weeks: weeks || [],
     deliveries: deliveries || []
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* referral code linking                                               */
+/* ------------------------------------------------------------------ */
+
+export async function linkReferralCode(env, { affiliate_id, referral_code }) {
+  const supabase = getSupabase(env);
+
+  if (!affiliate_id) throw new Error("An affiliate must be given.");
+
+  const code = String(referral_code || "").trim();
+  if (!code) throw new Error("A referral code must be given.");
+  if (code.length > 100) throw new Error("That referral code looks too long.");
+
+  const { data: clash } = await supabase
+    .from("affiliates")
+    .select("id, name")
+    .eq("referral_code", code)
+    .maybeSingle();
+
+  if (clash && clash.id !== affiliate_id) {
+    throw new Error(
+      `That referral code is already linked to ${clash.name || "another affiliate"}.`
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("affiliates")
+    .update({ referral_code: code, updated_at: new Date().toISOString() })
+    .eq("id", affiliate_id)
+    .select()
+    .single();
+
+  if (error) throw new Error("Could not link the code: " + error.message);
+
+  return { id: data.id, name: data.name, referral_code: data.referral_code };
+}
+
+export async function unlinkReferralCode(env, affiliateId) {
+  const supabase = getSupabase(env);
+
+  const { error } = await supabase
+    .from("affiliates")
+    .update({ referral_code: null, updated_at: new Date().toISOString() })
+    .eq("id", affiliateId);
+
+  if (error) throw new Error("Could not unlink: " + error.message);
+
+  return { id: affiliateId, referral_code: null };
 }
 
 /* ------------------------------------------------------------------ */
@@ -285,7 +344,7 @@ export async function recordDelivery(env, { affiliate_id, leads, note }) {
 
   const { data: affiliate, error: affError } = await supabase
     .from("affiliates")
-    .select("id, affiliate_id")
+    .select("id, name, referral_code")
     .eq("id", affiliate_id)
     .single();
 
@@ -318,7 +377,7 @@ export async function recordDelivery(env, { affiliate_id, leads, note }) {
 
   return {
     delivery: row,
-    affiliate_code: affiliate.affiliate_id,
+    affiliate_name: affiliate.name || affiliate.referral_code,
     lifetime_owed: owed,
     lifetime_delivered: delivered,
     balance: owed - delivered
@@ -351,7 +410,7 @@ export async function getDeliveries(env) {
 
   const { data, error } = await supabase
     .from("lead_deliveries")
-    .select("id, leads, delivered_at, note, affiliates(affiliate_id)")
+    .select("id, leads, delivered_at, note, affiliates(name, referral_code)")
     .order("delivered_at", { ascending: false })
     .limit(100);
 
@@ -362,7 +421,7 @@ export async function getDeliveries(env) {
     leads: d.leads,
     delivered_at: d.delivered_at,
     note: d.note,
-    affiliate_code: d.affiliates?.affiliate_id || null
+    affiliate_name: d.affiliates?.name || d.affiliates?.referral_code || null
   }));
 }
 

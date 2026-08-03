@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { getSupabase } from "./providers/supabase.js";
-import { listSubscriptions } from "./providers/ghl.js";
+import { listSubscriptions, listAffiliates, listCampaigns } from "./providers/ghl.js";
 import { surveySubscriptions } from "./routes/survey.js";
-import { runSync } from "./services/syncService.js";
+import { runSync, getUnlinkedCodes } from "./services/syncService.js";
 import { calculateWeeklyRewards } from "./services/rewardService.js";
 import {
   getOverview,
@@ -11,7 +11,9 @@ import {
   getActivity,
   getDeliveries,
   recordDelivery,
-  deleteDelivery
+  deleteDelivery,
+  linkReferralCode,
+  unlinkReferralCode
 } from "./services/dashboardService.js";
 import { dashboardHtml } from "./dashboard.js";
 
@@ -32,17 +34,11 @@ function requireSecret(c) {
 /* ---------------- public ---------------- */
 
 app.get("/", (c) => {
-  return c.json({
-    success: true,
-    message: "Affiliate Rewards API Running"
-  });
+  return c.json({ success: true, message: "Affiliate Rewards API Running" });
 });
 
 app.get("/health", (c) => {
-  return c.json({
-    status: "ok",
-    timestamp: new Date().toISOString()
-  });
+  return c.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 app.get("/dashboard", (c) => {
@@ -52,19 +48,14 @@ app.get("/dashboard", (c) => {
 app.get("/test-db", async (c) => {
   const supabase = getSupabase(c.env);
 
-  const { data, error } = await supabase
-    .from("settings")
-    .select("*")
-    .limit(5);
+  const { data, error } = await supabase.from("settings").select("*").limit(5);
 
-  if (error) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
+  if (error) return c.json({ success: false, error: error.message }, 500);
 
   return c.json({ success: true, rows: data });
 });
 
-/* ---------------- protected ---------------- */
+/* ---------------- diagnostics ---------------- */
 
 app.get("/test-ghl", async (c) => {
   const auth = requireSecret(c); if (auth) return auth;
@@ -74,13 +65,11 @@ app.get("/test-ghl", async (c) => {
 
     const preview = (result.data || []).map((s) => ({
       subscriptionId: s._id,
-      contactId: s.contactId,
       contactName: s.contactName,
       status: s.status,
       amount: s.amount,
       product: s.recurringProduct?.product?.name || null,
-      productId: s.recurringProduct?.product?._id || null,
-      affiliate: s.entitySourceMeta?.affiliateManager?.id || null,
+      referralCode: s.entitySourceMeta?.affiliateManager?.id || null,
       startedAt: s.subscriptionStartDate
     }));
 
@@ -90,6 +79,47 @@ app.get("/test-ghl", async (c) => {
       returned: preview.length,
       subscriptions: preview
     });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.get("/test-affiliates", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    const supabase = getSupabase(c.env);
+    const { data: setting } = await supabase
+      .from("settings")
+      .select("setting_value")
+      .eq("setting_key", "lead_payout_campaign_id")
+      .maybeSingle();
+
+    const result = await listAffiliates(c.env, {
+      campaignId: setting?.setting_value
+    });
+
+    return c.json({ success: true, raw: result });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.get("/test-campaigns", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    const result = await listCampaigns(c.env);
+
+    const preview = (result.campaigns || []).map((x) => ({
+      id: x._id,
+      name: x.name,
+      affiliates: (x.affiliates || []).length,
+      leads: x.leads,
+      link: x.referralRealLink
+    }));
+
+    return c.json({ success: true, campaigns: preview });
   } catch (err) {
     return c.json({ success: false, error: err.message }, 500);
   }
@@ -105,6 +135,8 @@ app.get("/survey", async (c) => {
     return c.json({ success: false, error: err.message }, 500);
   }
 });
+
+/* ---------------- sync + rewards ---------------- */
 
 app.get("/sync", async (c) => {
   const auth = requireSecret(c); if (auth) return auth;
@@ -168,6 +200,40 @@ app.get("/api/affiliates/:id", async (c) => {
     return c.json({
       success: true,
       data: await getAffiliateDetail(c.env, c.req.param("id"))
+    });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.get("/api/unlinked", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    return c.json({ success: true, data: await getUnlinkedCodes(c.env) });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.post("/api/link", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    const body = await c.req.json();
+    return c.json({ success: true, data: await linkReferralCode(c.env, body) });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.delete("/api/link/:id", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    return c.json({
+      success: true,
+      data: await unlinkReferralCode(c.env, c.req.param("id"))
     });
   } catch (err) {
     return c.json({ success: false, error: err.message }, 500);
