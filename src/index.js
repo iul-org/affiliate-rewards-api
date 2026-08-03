@@ -24,6 +24,11 @@ import {
   alertWeeklySummary,
   alertTest
 } from "./providers/alerts.js";
+import {
+  recordDeliveryEvent,
+  getDeliveryEvents,
+  getDeliveryStats
+} from "./services/deliveryEvents.js";
 import { dashboardHtml } from "./dashboard.js";
 
 const app = new Hono();
@@ -209,6 +214,79 @@ app.get("/rewards/backfill", async (c) => {
     return c.json({
       success: true,
       ...(await backfillMissingWeeks(c.env, { dryRun }))
+    });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+/* ---------------- twyne webhook ---------------- */
+
+async function checkWebhookToken(c) {
+  const supabase = getSupabase(c.env);
+
+  const { data } = await supabase
+    .from("settings")
+    .select("setting_value")
+    .eq("setting_key", "twyne_webhook_token")
+    .maybeSingle();
+
+  const expected = data?.setting_value;
+  const given = c.req.param("token");
+
+  if (!expected || given !== expected) {
+    return c.json({ success: false, error: "Invalid webhook token" }, 401);
+  }
+
+  return null;
+}
+
+// Some platforms verify an endpoint with a GET before allowing a POST.
+app.get("/hooks/twyne/:token", async (c) => {
+  const bad = await checkWebhookToken(c); if (bad) return bad;
+
+  return c.json({
+    success: true,
+    message: "Webhook is live. Send delivery notifications here as POST with a JSON body."
+  });
+});
+
+app.post("/hooks/twyne/:token", async (c) => {
+  const bad = await checkWebhookToken(c); if (bad) return bad;
+
+  let payload;
+
+  try {
+    payload = await c.req.json();
+  } catch (err) {
+    // fall back to form encoding, which some senders use by default
+    try {
+      const form = await c.req.parseBody();
+      payload = { ...form };
+    } catch (err2) {
+      return c.json(
+        { success: false, error: "Could not read the body as JSON or form data." },
+        400
+      );
+    }
+  }
+
+  try {
+    const result = await recordDeliveryEvent(c.env, payload, { source: "twyne" });
+    return c.json({ success: true, ...result });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.get("/api/delivery-events", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    return c.json({
+      success: true,
+      stats: await getDeliveryStats(c.env),
+      data: await getDeliveryEvents(c.env)
     });
   } catch (err) {
     return c.json({ success: false, error: err.message }, 500);
