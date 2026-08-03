@@ -9,7 +9,9 @@ import {
   getAffiliates,
   getAffiliateDetail,
   getActivity,
-  markDelivered
+  getDeliveries,
+  recordDelivery,
+  deleteDelivery
 } from "./services/dashboardService.js";
 import { dashboardHtml } from "./dashboard.js";
 
@@ -26,6 +28,8 @@ function requireSecret(c) {
 
   return null;
 }
+
+/* ---------------- public ---------------- */
 
 app.get("/", (c) => {
   return c.json({
@@ -59,6 +63,8 @@ app.get("/test-db", async (c) => {
 
   return c.json({ success: true, rows: data });
 });
+
+/* ---------------- protected ---------------- */
 
 app.get("/test-ghl", async (c) => {
   const auth = requireSecret(c); if (auth) return auth;
@@ -133,6 +139,8 @@ app.get("/rewards/calculate", async (c) => {
   }
 });
 
+/* ---------------- dashboard api ---------------- */
+
 app.get("/api/overview", async (c) => {
   const auth = requireSecret(c); if (auth) return auth;
 
@@ -176,16 +184,41 @@ app.get("/api/activity", async (c) => {
   }
 });
 
-app.post("/api/rewards/delivered", async (c) => {
+app.get("/api/deliveries", async (c) => {
   const auth = requireSecret(c); if (auth) return auth;
 
   try {
-    const body = await c.req.json();
-    return c.json({ success: true, data: await markDelivered(c.env, body) });
+    return c.json({ success: true, data: await getDeliveries(c.env) });
   } catch (err) {
     return c.json({ success: false, error: err.message }, 500);
   }
 });
+
+app.post("/api/deliveries", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    const body = await c.req.json();
+    return c.json({ success: true, data: await recordDelivery(c.env, body) });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.delete("/api/deliveries/:id", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    return c.json({
+      success: true,
+      data: await deleteDelivery(c.env, c.req.param("id"))
+    });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+/* ---------------- cron ---------------- */
 
 export default {
   fetch: app.fetch,
