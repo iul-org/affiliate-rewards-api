@@ -9,14 +9,15 @@
   "triggers": {
     "crons": ["0 9 * * 2"]
   },
-  "routes": [
+"routes": [
     { "pattern": "affiliate.safermoney.org", "custom_domain": true }
   ],
-  "vars": {
+
+ "vars": {
     "SUPABASE_URL": "https://xbtmvqynqgdioizshewo.supabase.co",
     "GHL_LOCATION_ID": "pqkwwYgPq7RgfCPZIO0F",
     "GHL_API_BASE": "https://services.leadconnectorhq.com",
     "ALERT_TO": "david@iul.org,support@iul.org",
-    "ALERT_FROM": "Affiliate Rewards <alerts@updated.safermoney.org>"
+"ALERT_FROM": "Affiliate Rewards <alerts@updated.safermoney.org>",
   }
 }
