@@ -7,7 +7,7 @@
     "enabled": true
   },
   "triggers": {
-    "crons": ["0 9 * * 2"]
+    "crons": ["25 0 * * *"]
   },
   "routes": [
     { "pattern": "affiliate.safermoney.org", "custom_domain": true }
