@@ -309,7 +309,11 @@ app.get("/api/affiliates", async (c) => {
   const auth = requireSecret(c); if (auth) return auth;
 
   try {
-    return c.json({ success: true, data: await getAffiliates(c.env) });
+    const includeRemoved = c.req.query("includeRemoved") === "yes";
+    return c.json({
+      success: true,
+      data: await getAffiliates(c.env, { includeRemoved })
+    });
   } catch (err) {
     return c.json({ success: false, error: err.message }, 500);
   }

@@ -41,12 +41,13 @@ export async function getOverview(env) {
 
   const { data: affiliateRows } = await supabase
     .from("affiliates")
-    .select("id, referral_code, status");
+    .select("id, referral_code, status, removed_at");
 
-  const affiliateCount = (affiliateRows || []).length;
-  const unlinkedAffiliates = (affiliateRows || []).filter(
-    (a) => !a.referral_code
-  ).length;
+  const live = (affiliateRows || []).filter((a) => !a.removed_at);
+
+  const affiliateCount = live.length;
+  const removedAffiliates = (affiliateRows || []).length - live.length;
+  const unlinkedAffiliates = live.filter((a) => !a.referral_code).length;
 
   const { data: weeks, error: weekError } = await supabase
     .from("weekly_rewards")
@@ -108,6 +109,7 @@ export async function getOverview(env) {
   return {
     affiliates: affiliateCount,
     unlinkedAffiliates,
+    removedAffiliates,
     subscriptions: {
       total: (subs || []).length,
       active: statusCounts.active || 0,
@@ -139,12 +141,16 @@ export async function getOverview(env) {
 /* affiliates                                                          */
 /* ------------------------------------------------------------------ */
 
-export async function getAffiliates(env) {
+export async function getAffiliates(env, { includeRemoved = false } = {}) {
   const supabase = getSupabase(env);
 
-  const { data: affiliates, error } = await supabase
+  let query = supabase
     .from("affiliates")
-    .select("id, affiliate_id, referral_code, name, email, phone, status, created_at");
+    .select("id, affiliate_id, referral_code, name, email, phone, status, created_at, removed_at");
+
+  if (!includeRemoved) query = query.is("removed_at", null);
+
+  const { data: affiliates, error } = await query;
 
   if (error) throw new Error("Affiliates: " + error.message);
 
@@ -193,6 +199,8 @@ export async function getAffiliates(env) {
       email: a.email,
       phone: a.phone,
       status: a.status,
+      removed: Boolean(a.removed_at),
+      removed_at: a.removed_at,
       total_referrals: mySubs.length,
       active_referrals: active.length,
       weekly_revenue: active.reduce((sum, s) => sum + Number(s.amount || 0), 0),

@@ -67,6 +67,8 @@ export async function runSync(env) {
       (a) => !a.deleted
     );
 
+    const seenGhlIds = ghlAffiliates.map((a) => a._id);
+
     if (ghlAffiliates.length) {
       const rows = ghlAffiliates.map((a) => {
         const name = [a.firstName, a.lastName].filter(Boolean).join(" ").trim();
@@ -89,6 +91,63 @@ export async function runSync(env) {
         .upsert(rows, { onConflict: "affiliate_id", ignoreDuplicates: false });
 
       if (affError) throw new Error("Affiliate upsert: " + affError.message);
+    }
+
+    /* ---------- 1b. affiliates that vanished from GHL ---------- */
+
+    // Anyone stored locally who is no longer returned by the campaign has been
+    // deleted in GHL or moved to another campaign. We flag rather than delete:
+    // their earning history and deliveries stay intact and the change can be
+    // undone if the disappearance was a mistake or a partial API response.
+    let removed = [];
+    let restored = [];
+
+    if (seenGhlIds.length) {
+      const { data: localRows, error: localError } = await supabase
+        .from("affiliates")
+        .select("id, affiliate_id, name, removed_at");
+
+      if (localError) throw new Error("Affiliate read: " + localError.message);
+
+      const seen = new Set(seenGhlIds);
+
+      const gone = (localRows || []).filter(
+        (r) => !seen.has(r.affiliate_id) && !r.removed_at
+      );
+
+      const back = (localRows || []).filter(
+        (r) => seen.has(r.affiliate_id) && r.removed_at
+      );
+
+      if (gone.length) {
+        const { error } = await supabase
+          .from("affiliates")
+          .update({
+            removed_at: new Date().toISOString(),
+            status: "removed",
+            updated_at: new Date().toISOString()
+          })
+          .in("id", gone.map((r) => r.id));
+
+        if (error) throw new Error("Affiliate removal flag: " + error.message);
+
+        removed = gone.map((r) => r.name || r.affiliate_id);
+      }
+
+      if (back.length) {
+        const { error } = await supabase
+          .from("affiliates")
+          .update({
+            removed_at: null,
+            status: "active",
+            updated_at: new Date().toISOString()
+          })
+          .in("id", back.map((r) => r.id));
+
+        if (error) throw new Error("Affiliate restore: " + error.message);
+
+        restored = back.map((r) => r.name || r.affiliate_id);
+      }
     }
 
     /* ---------- 2. subscriptions from GHL ---------- */
@@ -181,7 +240,9 @@ export async function runSync(env) {
       affiliatesFromGhl: ghlAffiliates.length,
       affiliateSubscriptions: relevant.length,
       synced: rows.length,
-      unlinked
+      unlinked,
+      removed,
+      restored
     };
   } catch (err) {
     await supabase
@@ -214,7 +275,8 @@ export async function getUnlinkedCodes(env) {
 
   const { data: affRows } = await supabase
     .from("affiliates")
-    .select("id, affiliate_id, referral_code, name, email");
+    .select("id, affiliate_id, referral_code, name, email, removed_at")
+    .is("removed_at", null);
 
   const taken = new Set(
     (affRows || []).filter((a) => a.referral_code).map((a) => a.referral_code)
