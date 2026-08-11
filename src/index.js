@@ -434,17 +434,27 @@ export default {
           const rewards = await calculateWeeklyRewards(env);
           console.log("Cron rewards complete:", JSON.stringify(rewards));
 
-          stage = "summary";
-          let balances = null;
-          try {
-            const overview = await getOverview(env);
-            balances = overview.lifetime;
-          } catch (err) {
-            console.error("Could not load balances for summary:", err.message);
-          }
+          // The job runs daily so the data stays current and a failed day
+          // recovers the next morning. The summary is only worth an inbox
+          // once a week, so it goes out on Mondays. Failures still alert
+          // immediately, any day.
+          const isMonday = new Date().getUTCDay() === 1;
 
-          const mail = await alertWeeklySummary(env, { sync, rewards, gaps, balances });
-          console.log("Cron summary email:", JSON.stringify(mail));
+          if (isMonday) {
+            stage = "summary";
+            let balances = null;
+            try {
+              const overview = await getOverview(env);
+              balances = overview.lifetime;
+            } catch (err) {
+              console.error("Could not load balances for summary:", err.message);
+            }
+
+            const mail = await alertWeeklySummary(env, { sync, rewards, gaps, balances });
+            console.log("Cron summary email:", JSON.stringify(mail));
+          } else {
+            console.log("Not Monday, summary email skipped.");
+          }
         } catch (err) {
           console.error("Cron failed during " + stage + ":", err.message);
 
