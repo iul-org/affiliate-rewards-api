@@ -333,6 +333,69 @@ export async function unlinkReferralCode(env, affiliateId) {
   return { id: affiliateId, referral_code: null };
 }
 
+
+/* ------------------------------------------------------------------ */
+/* ignored referral codes                                              */
+/* ------------------------------------------------------------------ */
+
+export async function ignoreCode(env, { referral_code, reason }) {
+  const supabase = getSupabase(env);
+
+  const code = String(referral_code || "").trim();
+  if (!code) throw new Error("A referral code must be given.");
+
+  const { data: clash } = await supabase
+    .from("affiliates")
+    .select("id, name")
+    .eq("referral_code", code)
+    .maybeSingle();
+
+  if (clash) {
+    throw new Error(
+      `That code is linked to ${clash.name || "an affiliate"}. Unlink it first if you want it ignored.`
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("ignored_codes")
+    .upsert(
+      { referral_code: code, reason: reason ? String(reason).slice(0, 300) : null },
+      { onConflict: "referral_code" }
+    )
+    .select()
+    .single();
+
+  if (error) throw new Error("Could not ignore the code: " + error.message);
+
+  return data;
+}
+
+export async function unignoreCode(env, referralCode) {
+  const supabase = getSupabase(env);
+
+  const { error } = await supabase
+    .from("ignored_codes")
+    .delete()
+    .eq("referral_code", referralCode);
+
+  if (error) throw new Error("Could not restore the code: " + error.message);
+
+  return { referral_code: referralCode };
+}
+
+export async function getIgnoredCodes(env) {
+  const supabase = getSupabase(env);
+
+  const { data, error } = await supabase
+    .from("ignored_codes")
+    .select("referral_code, reason, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error("Ignored codes: " + error.message);
+
+  return data || [];
+}
+
 /* ------------------------------------------------------------------ */
 /* deliveries                                                          */
 /* ------------------------------------------------------------------ */

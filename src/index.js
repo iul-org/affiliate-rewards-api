@@ -17,7 +17,10 @@ import {
   recordDelivery,
   deleteDelivery,
   linkReferralCode,
-  unlinkReferralCode
+  unlinkReferralCode,
+  ignoreCode,
+  unignoreCode,
+  getIgnoredCodes
 } from "./services/dashboardService.js";
 import {
   alertSyncFailed,
@@ -360,6 +363,40 @@ app.delete("/api/link/:id", async (c) => {
     return c.json({
       success: true,
       data: await unlinkReferralCode(c.env, c.req.param("id"))
+    });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.get("/api/ignored", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    return c.json({ success: true, data: await getIgnoredCodes(c.env) });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.post("/api/ignored", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    const body = await c.req.json();
+    return c.json({ success: true, data: await ignoreCode(c.env, body) });
+  } catch (err) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+app.delete("/api/ignored/:code", async (c) => {
+  const auth = requireSecret(c); if (auth) return auth;
+
+  try {
+    return c.json({
+      success: true,
+      data: await unignoreCode(c.env, c.req.param("code"))
     });
   } catch (err) {
     return c.json({ success: false, error: err.message }, 500);

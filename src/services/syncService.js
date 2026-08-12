@@ -168,6 +168,12 @@ export async function runSync(env) {
 
     if (affReadError) throw new Error("Affiliate read: " + affReadError.message);
 
+    const { data: ignoredRows } = await supabase
+      .from("ignored_codes")
+      .select("referral_code");
+
+    const ignoredSet = new Set((ignoredRows || []).map((r) => r.referral_code));
+
     const byCode = {};
     for (const row of affRows || []) {
       if (row.referral_code) byCode[row.referral_code] = row.id;
@@ -184,6 +190,7 @@ export async function runSync(env) {
 
       if (!uuid) {
         // no affiliate linked to this referral code yet
+        if (ignoredSet.has(code)) continue;
         if (!unlinkedCodes[code]) {
           unlinkedCodes[code] = { code, subscriptions: 0, active: 0 };
         }
@@ -278,6 +285,15 @@ export async function getUnlinkedCodes(env) {
     .select("id, affiliate_id, referral_code, name, email, removed_at")
     .is("removed_at", null);
 
+  // Codes deliberately dismissed, e.g. sales made while testing. The
+  // subscriptions still exist in GHL and always will, so the only way to stop
+  // them resurfacing is to remember that they were dismissed.
+  const { data: ignoredRows } = await supabase
+    .from("ignored_codes")
+    .select("referral_code");
+
+  const ignored = new Set((ignoredRows || []).map((r) => r.referral_code));
+
   const taken = new Set(
     (affRows || []).filter((a) => a.referral_code).map((a) => a.referral_code)
   );
@@ -285,7 +301,7 @@ export async function getUnlinkedCodes(env) {
   const counts = {};
   for (const s of relevant) {
     const code = s.entitySourceMeta.affiliateManager.id;
-    if (taken.has(code)) continue;
+    if (taken.has(code) || ignored.has(code)) continue;
 
     if (!counts[code]) counts[code] = { code, subscriptions: 0, active: 0 };
     counts[code].subscriptions++;

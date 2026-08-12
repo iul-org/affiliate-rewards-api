@@ -21,6 +21,7 @@ export const dashboardHtml = `<!DOCTYPE html>
     -webkit-font-smoothing:antialiased}
   .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
   .serif{font-family:'Instrument Serif',Georgia,serif;font-weight:400}
+  .mono{font-family:'IBM Plex Mono',monospace}
 
   @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
   @keyframes fade{from{opacity:0}to{opacity:1}}
@@ -421,7 +422,7 @@ export const dashboardHtml = `<!DOCTYPE html>
 <script>
 var KEY = sessionStorage.getItem('arp_key') || '';
 var S = { overview:null, affiliates:[], activity:null, deliveries:null, unlinked:null,
-          open:null, detail:{}, pending:null, tab:'overview', q:'' };
+          open:null, detail:{}, pending:null, tab:'overview', q:'', ignored:null };
 
 function el(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -553,8 +554,10 @@ function loadDeliveries(){
 }
 function loadUnlinked(){
   el('linking').innerHTML='<div class="skel" style="width:55%"></div>';
-  return api('/api/unlinked').then(function(r){
-    S.unlinked=r.data||[]; renderLinking(); renderDot();
+  return Promise.all([api('/api/unlinked'), api('/api/ignored')]).then(function(r){
+    S.unlinked=r[0].data||[];
+    S.ignored=r[1].data||[];
+    renderLinking(); renderDot();
   }).catch(function(e){
     el('linking').innerHTML='<div class="note">Could not scan: '+esc(e.message)+'</div>';
   });
@@ -817,47 +820,70 @@ function renderList(){
 el('search').addEventListener('input',function(e){ S.q=e.target.value; renderList(); });
 
 /* ---------- linking ---------- */
+function ignoredHtml(){
+  var rows=S.ignored||[];
+  if(!rows.length) return '';
+
+  return '<div style="margin-top:30px">'+
+    '<h3 style="font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;'+
+    'color:var(--muted);margin:0 0 10px;font-weight:600">Ignored codes</h3>'+
+    '<div class="card" style="padding:16px 20px">'+
+      '<table><thead><tr><th>Code</th><th>Reason</th><th class="num"></th></tr></thead><tbody>'+
+      rows.map(function(r){
+        return '<tr><td class="mono">'+esc(r.referral_code)+'</td>'+
+          '<td style="color:var(--muted)">'+esc(r.reason||'')+'</td>'+
+          '<td class="num"><button class="link" data-unignore="'+esc(r.referral_code)+'">Restore</button></td></tr>';
+      }).join('')+
+      '</tbody></table>'+
+    '</div></div>';
+}
+
 function renderLinking(){
   var host=el('linking'), rows=S.unlinked||[];
   var open=S.affiliates.filter(function(a){ return !a.linked; });
 
+  var body;
+
   if(!rows.length){
-    host.innerHTML='<div class="note"><strong>Every code is linked</strong>'+
+    body='<div class="note"><strong>Every code is linked</strong>'+
       (open.length
         ? num(open.length)+' affiliate'+(open.length===1?' has':'s have')+' no code yet, but no unclaimed sales exist either. A code will appear here after their first referral.'
         : 'All sales are attributed correctly.')+'</div>';
-    return;
+  } else {
+    body=rows.map(function(r){
+      var opts=(r.candidates||[]).map(function(cand){
+        var sel = r.suggestion && r.suggestion.id===cand.id ? ' selected' : '';
+        return '<option value="'+esc(cand.id)+'"'+sel+'>'+esc(cand.name||cand.email||cand.id)+'</option>';
+      }).join('');
+
+      return '<div class="linkrow">'+
+        '<div class="head">'+
+          '<div>'+
+            '<div class="bigcode">'+esc(r.code)+'</div>'+
+            '<div class="facts">'+
+              '<span>'+num(r.subscriptions)+' sale'+(r.subscriptions===1?'':'s')+'</span>'+
+              '<span>'+num(r.active)+' still active</span>'+
+            '</div>'+
+          '</div>'+
+          (r.suggestion
+            ? '<span class="pill ok">Looks like '+esc(r.suggestion.name)+'</span>'
+            : r.ambiguous
+              ? '<span class="pill warn">Several possible matches</span>'
+              : '<span class="pill dead">No obvious match</span>')+
+        '</div>'+
+        '<div class="linkctl">'+
+          (opts
+            ? '<select id="sel-'+esc(r.code)+'">'+opts+'</select>'+
+              '<button class="go" data-link="'+esc(r.code)+'">Link this code</button>'
+            : '<span style="font-size:13.5px;color:var(--muted)">Every affiliate already has a code. Add the affiliate in GHL and pull again.</span>')+
+          '<button class="link danger" data-ignore="'+esc(r.code)+'" '+
+            'title="Hide this code. Use it for sales made while testing.">Ignore this code</button>'+
+        '</div>'+
+      '</div>';
+    }).join('');
   }
 
-  host.innerHTML=rows.map(function(r){
-    var opts=(r.candidates||[]).map(function(cand){
-      var sel = r.suggestion && r.suggestion.id===cand.id ? ' selected' : '';
-      return '<option value="'+esc(cand.id)+'"'+sel+'>'+esc(cand.name||cand.email||cand.id)+'</option>';
-    }).join('');
-
-    return '<div class="linkrow">'+
-      '<div class="head">'+
-        '<div>'+
-          '<div class="bigcode">'+esc(r.code)+'</div>'+
-          '<div class="facts">'+
-            '<span>'+num(r.subscriptions)+' sale'+(r.subscriptions===1?'':'s')+'</span>'+
-            '<span>'+num(r.active)+' still active</span>'+
-          '</div>'+
-        '</div>'+
-        (r.suggestion
-          ? '<span class="pill ok">Looks like '+esc(r.suggestion.name)+'</span>'
-          : r.ambiguous
-            ? '<span class="pill warn">Several possible matches</span>'
-            : '<span class="pill dead">No obvious match</span>')+
-      '</div>'+
-      '<div class="linkctl">'+
-        (opts
-          ? '<select id="sel-'+esc(r.code)+'">'+opts+'</select>'+
-            '<button class="go" data-link="'+esc(r.code)+'">Link this code</button>'
-          : '<span style="font-size:13.5px;color:var(--muted)">Every affiliate already has a code. Add the affiliate in GHL and pull again.</span>')+
-      '</div>'+
-    '</div>';
-  }).join('');
+  host.innerHTML = body + ignoredHtml();
 
   Array.prototype.forEach.call(host.querySelectorAll('[data-link]'),function(b){
     b.addEventListener('click',function(){
@@ -867,6 +893,39 @@ function renderLinking(){
       doLink(sel.value, code, b);
     });
   });
+
+  Array.prototype.forEach.call(host.querySelectorAll('[data-ignore]'),function(b){
+    b.addEventListener('click',function(){ doIgnore(b.getAttribute('data-ignore'), b); });
+  });
+
+  Array.prototype.forEach.call(host.querySelectorAll('[data-unignore]'),function(b){
+    b.addEventListener('click',function(){ doUnignore(b.getAttribute('data-unignore')); });
+  });
+}
+
+function doIgnore(code, btn){
+  btn.disabled=true; btn.textContent='Ignoring';
+
+  api('/api/ignored',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ referral_code:code, reason:'Dismissed from the portal' })
+  }).then(function(){
+    toast(code+' will no longer appear here.');
+    S.unlinked=null; S.ignored=null;
+    return loadUnlinked();
+  }).catch(function(e){
+    btn.disabled=false; btn.textContent='Ignore this code';
+    showErr(e);
+  });
+}
+
+function doUnignore(code){
+  api('/api/ignored/'+encodeURIComponent(code),{ method:'DELETE' }).then(function(){
+    toast(code+' restored.');
+    S.unlinked=null; S.ignored=null;
+    return loadUnlinked();
+  }).catch(showErr);
 }
 
 function doLink(affiliateId, code, btn){
@@ -1026,7 +1085,7 @@ function renderActivity(){
 
 /* ---------- actions ---------- */
 el('refreshBtn').addEventListener('click',function(){
-  S.detail={}; S.activity=null; S.deliveries=null; S.pending=null; S.unlinked=null;
+  S.detail={}; S.activity=null; S.deliveries=null; S.pending=null; S.unlinked=null; S.ignored=null;
   loadAll().then(function(){ toast('Refreshed'); });
 });
 
